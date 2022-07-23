@@ -11,7 +11,7 @@
     <artifactId>gmall-pms</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>gmall-pms</name>
-    <description>谷粒商城商品管理系统</description>
+    <description>gmall-pms</description>
 
     <dependencies>
         <dependency>
@@ -51,7 +51,6 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-zipkin</artifactId>
         </dependency>
-
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>

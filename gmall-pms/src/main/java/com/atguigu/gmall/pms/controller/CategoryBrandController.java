@@ -24,7 +24,7 @@ import com.atguigu.gmall.common.bean.PageParamVo;
  *
  * @author fengge
  * @email fengge@atguigu.com
- * @date 2022-07-21 15:24:45
+ * @date 2022-07-22 19:59:32
  */
 @Api(tags = "品牌分类关联 管理")
 @RestController

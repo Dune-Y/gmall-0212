@@ -3,7 +3,7 @@ server:
 spring:
   cloud:
     nacos:
-      discovery:
+      config:
         server-addr: localhost:8848
     gateway:
       routes:
@@ -15,15 +15,12 @@ spring:
           uri: lb://ums-service
           predicates:
             - Path=/ums/**
-        - id: wms-route
-          uri: lb://wms-service
-          predicates:
-            - Path=/wms/**
         - id: sms-route
           uri: lb://sms-service
           predicates:
             - Path=/sms/**
         - id: oms-route
-          uri: lb://oms-service
+          uri: lb://osm-service
           predicates:
             - Path=/oms/**
+

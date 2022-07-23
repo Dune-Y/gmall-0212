@@ -9,7 +9,7 @@ import org.apache.ibatis.annotations.Mapper;
  * 
  * @author fengge
  * @email fengge@atguigu.com
- * @date 2022-07-21 15:24:45
+ * @date 2022-07-22 19:59:33
  */
 @Mapper
 public interface SkuImagesMapper extends BaseMapper<SkuImagesEntity> {
