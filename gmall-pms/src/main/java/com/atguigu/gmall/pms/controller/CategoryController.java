@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.atguigu.gmall.pms.entity.CategoryEntity;
@@ -37,6 +36,14 @@ public class CategoryController {
     /**
      * 列表
      */
+
+    @GetMapping("parent/{parentId}")
+    public ResponseVo<List<CategoryEntity>> parent(@PathVariable("parentId")Long pid) {
+       List<CategoryEntity> categoryEntities = this.categoryService.queryCategoriesByPid(pid);
+       return ResponseVo.ok(categoryEntities);
+    }
+
+
     @GetMapping
     @ApiOperation("分页查询")
     public ResponseVo<PageResultVo> queryCategoryByPage(PageParamVo paramVo){

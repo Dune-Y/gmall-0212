@@ -15,3 +15,4 @@ public class GmallSmsApplication {
         SpringApplication.run(GmallSmsApplication.class, args);
     }
 }
+
