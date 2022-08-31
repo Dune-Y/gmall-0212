@@ -15,6 +15,9 @@ public class CorsConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         // 允许的域,不要写*, 否则cookie就无法使用了
         configuration.addAllowedOrigin("http://manager.gmall.com");
+        configuration.addAllowedOrigin("http://www.gmall.com");
+        configuration.addAllowedOrigin("http://gmall.com");
+        configuration.addAllowedOrigin("http://localhost:1000");
         // 允许的头信息
         configuration.addAllowedHeader("*");
         // 允许的请求方式

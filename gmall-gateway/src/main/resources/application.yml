@@ -23,8 +23,11 @@ spring:
           uri: lb://osm-service
           predicates:
             - Path=/oms/**
-        - id: index-service
-          uri: lb://index_service
+        - id: index-route # 为同步请求配置的路由
+          uri: lb://index-service
           predicates:
             - Host=gmall.com, www.gmall.com
-
+        - id: index-route2 # 为异步请求配置的路由
+          uri: lb://index-service
+          predicates:
+            - Path=/index/**
