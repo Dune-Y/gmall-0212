@@ -23,4 +23,8 @@ spring:
           uri: lb://osm-service
           predicates:
             - Path=/oms/**
+        - id: index-service
+          uri: lb://index_service
+          predicates:
+            - Host=gmall.com, www.gmall.com
 
