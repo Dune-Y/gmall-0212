@@ -1,8 +1,8 @@
-package com.atguigu.gmall.item.vo;
+package com.atguigu.gmall.pms.vo;
 
 import lombok.Data;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * @ ClassName SaleAttrValueVo
@@ -13,7 +13,7 @@ import java.util.List;
  */
 @Data
 public class SaleAttrValueVo {
-    private Integer attrId;
+    private Long attrId;
     private String attrName;
-    private List<String> attrValues;
+    private Set<String> attrValue;
 }

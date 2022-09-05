@@ -22,7 +22,7 @@ import java.util.List;
 @Api(tags = "spu属性值 管理")
 @RestController
 @RequestMapping("pms/spuattrvalue")
-public class SpuAttrValueController {
+public class  SpuAttrValueController {
 
     @Autowired
     private SpuAttrValueService spuAttrValueService;

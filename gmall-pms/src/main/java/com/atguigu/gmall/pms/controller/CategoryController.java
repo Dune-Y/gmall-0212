@@ -1,17 +1,16 @@
 package com.atguigu.gmall.pms.controller;
 
-import java.util.List;
-
+import com.atguigu.gmall.common.bean.PageParamVo;
+import com.atguigu.gmall.common.bean.PageResultVo;
+import com.atguigu.gmall.common.bean.ResponseVo;
+import com.atguigu.gmall.pms.entity.CategoryEntity;
+import com.atguigu.gmall.pms.service.CategoryService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import com.atguigu.gmall.pms.entity.CategoryEntity;
-import com.atguigu.gmall.pms.service.CategoryService;
-import com.atguigu.gmall.common.bean.PageResultVo;
-import com.atguigu.gmall.common.bean.ResponseVo;
-import com.atguigu.gmall.common.bean.PageParamVo;
+import java.util.List;
 
 /**
  * 商品三级分类
@@ -27,6 +26,12 @@ public class CategoryController {
 
     @Autowired
     private CategoryService categoryService;
+
+    @GetMapping("lvl123/{cid3}")
+    public ResponseVo<List<CategoryEntity>> queryLvl123CategoriesByCid3(@PathVariable("cid3") Long cid3){
+        List<CategoryEntity> categoryEntities=  this.categoryService.queryLvl123CategoriesByCid3(cid3);
+        return ResponseVo.ok(categoryEntities);
+    }
 
     /**
      * 列表
