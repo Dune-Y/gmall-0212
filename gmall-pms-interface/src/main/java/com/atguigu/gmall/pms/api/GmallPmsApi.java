@@ -54,6 +54,9 @@ public interface GmallPmsApi {
             @PathVariable("cid") Long cid,
             @RequestParam("spuId") Long spuId
     );
+    @GetMapping("pms/skuattrvalue/mapping/{spuId}")
+    ResponseVo<String> queryMappingBySpuId(@PathVariable("spuId") Long spuId);
+
 
     @GetMapping("pms/skuattrvalue/spu/{spuId}")
     ResponseVo<List<SaleAttrValueVo>> querySaleAttrValuesBySpuId(@PathVariable("spuId") Long spuId);

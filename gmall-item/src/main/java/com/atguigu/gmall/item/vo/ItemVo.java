@@ -13,11 +13,12 @@ import java.util.Map;
 
 /**
  * @ ClassName ItemVo
- * @ Description  TODO
+ * @ Description
  * @ Author Nimodo
  * @ Date 2022/9/4 13:27
  * @ Version 1.0
  */
+
 @Data
 public class ItemVo {
     // 面包屑所需字段  V
@@ -37,7 +38,7 @@ public class ItemVo {
     private Integer weight;
     private String defaultImage;
 
-    private List<SkuImagesEntity> image; // sku图片列表 V
+    private List<SkuImagesEntity> images; // sku图片列表 V
 
     private List<ItemSaleVo> sales; // 营销信息 V
 
