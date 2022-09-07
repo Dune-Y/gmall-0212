@@ -134,7 +134,7 @@
 							<!--左右按钮-->
 							<div class="items">
 								<ul>
-									<li th:each="image : *{image}">
+									<li th:each="image : *{images}">
 										<img th:src="${image.url}" th:bimg="${image.url}" onmousemove="preview(this)" />
 									</li>
 								</ul>

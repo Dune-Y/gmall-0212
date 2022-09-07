@@ -14,11 +14,18 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 /**
@@ -40,81 +47,141 @@ public class ItemService {
     @Autowired
     private GmallWmsClient wmsClient;
 
-    public ItemVo loadData(Long skuId) {
-//      1. 根据skuId查询sku
-        ItemVo itemVo = new ItemVo();
-        ResponseVo<SkuEntity> skuEntityResponseVo = this.pmsClient.querySkuById(skuId);
-        SkuEntity skuEntity = skuEntityResponseVo.getData();
-        if (skuEntity == null) {
-            throw new RuntimeException("您访问的商品不存在");
-        }
-        itemVo.setSkuId(skuId);
-        itemVo.setTitle(skuEntity.getSubtitle());
-        itemVo.setSubtitle(skuEntity.getSubtitle());
-        itemVo.setPrice(skuEntity.getPrice());
-        itemVo.setWeight(skuEntity.getWeight());
-        itemVo.setDefaultImage(skuEntity.getDefaultImage());
-//        根据三级分类的id查询一二三级分类 V
-        ResponseVo<List<CategoryEntity>> categoryResponseVo = this.pmsClient.queryLvl123CategoriesByCid3(skuEntity.getCategoryId());
-        List<CategoryEntity> categoryEntities = categoryResponseVo.getData();
-        itemVo.setCategories(categoryEntities);
-//        根据品牌id查询品牌
-        ResponseVo<BrandEntity> brandEntityResponseVo = this.pmsClient.queryBrandById(skuId);
-        BrandEntity brandEntity = brandEntityResponseVo.getData();
-        if (brandEntity != null) {
-            itemVo.setBrandId(brandEntity.getId());
-            itemVo.setBrandName(brandEntity.getName());
-        }
-//        根据spuId查询spu
-        ResponseVo<SpuEntity> spuEntityResponseVo = this.pmsClient.querySpuById(skuEntity.getSpuId());
-        SpuEntity spuEntity = spuEntityResponseVo.getData();
-        if (spuEntity != null) {
-            itemVo.setSpuId(spuEntity.getId());
-            itemVo.setSpuName(spuEntity.getName());
-        }
-//        根据skuId查询sku的图片列表
-        ResponseVo<List<SkuImagesEntity>> listResponseVo = this.pmsClient.querySkuImagesListBySkuId(skuId);
-        List<SkuImagesEntity> skuImagesEntities = listResponseVo.getData();
-        if (skuImagesEntities != null) {
-            itemVo.setImages(skuImagesEntities);
-        }
-//        根据skuId查询营销信息
-        ResponseVo<List<ItemSaleVo>> salesResponseVo = this.smsClient.querySalesBySkuId(skuId);
-        List<ItemSaleVo> itemSaleVos = salesResponseVo.getData();
-        itemVo.setSales(itemSaleVos);
-//        根据skuId查询库存
-        ResponseVo<List<WareSkuEntity>> wareResponseVo = this.wmsClient.queryWareSkusBySkuId(skuId);
-        List<WareSkuEntity> wareSkuEntities = wareResponseVo.getData();
-        if (!CollectionUtils.isEmpty(wareSkuEntities)) {
-            itemVo.setStore(wareSkuEntities.stream().anyMatch(wareSkuEntity -> wareSkuEntity.getStock() - wareSkuEntity.getStockLocked() > 0));
-        }
+    @Autowired
+    private ExecutorService executorService;
 
-//        根据spuId查询spu下所有sku的销售属性列表
-        ResponseVo<List<SaleAttrValueVo>> saleAttrsResponseVo = this.pmsClient.querySaleAttrValuesBySpuId(spuEntity.getId());
-        List<SaleAttrValueVo> saleAttrValueVos = saleAttrsResponseVo.getData();
-        itemVo.setSaleAttrs(saleAttrValueVos);
-//        根据skuId查询当前sku的销售属性
-        ResponseVo<List<SkuAttrValueEntity>> saleAttrResponseVo = this.pmsClient.querySaleAttrValuesBySkuId(skuId);
-        List<SkuAttrValueEntity> skuAttrValueEntities = saleAttrResponseVo.getData();
-        if (!CollectionUtils.isEmpty(skuAttrValueEntities)) {
-            itemVo.setSaleAttr(skuAttrValueEntities.stream().collect(Collectors.toMap(SkuAttrValueEntity::getAttrId, SkuAttrValueEntity::getAttrValue)));
-        }
-//        根据spuId查询spu下所有销售属性组合与skuId的映射关系
-        ResponseVo<String> stringResponseVo = this.pmsClient.queryMappingBySpuId(spuEntity.getId());
-        String json = stringResponseVo.getData();
-        itemVo.setSkuJsons(json);
-//        根据spuId查询spu的描述信息
-        ResponseVo<SpuDescEntity> spuDescEntityResponseVo = this.pmsClient.querySpuDescById(spuEntity.getId());
-        SpuDescEntity spuDescEntity = spuDescEntityResponseVo.getData();
-        if (spuDescEntity != null) {
-            itemVo.setSpuImages(Arrays.asList(StringUtils.split(spuDescEntity.getDecript(), ",")));
-        }
-//        查询规格参数分组及组下的规格参数和值
-        ResponseVo<List<ItemGroupVo>> groupResponseVo = this.pmsClient.queryGroupsWithAttrValuesByCidAndSpuIdAndSkuId(skuEntity.getCategoryId(), skuEntity.getSpuId(), skuId);
-        itemVo.setGroups(groupResponseVo.getData());
+    @Autowired
+    private TemplateEngine templateEngine;
+
+    public ItemVo loadData(Long skuId) {
+
+        ItemVo itemVo = new ItemVo();
+        CompletableFuture<SkuEntity> skuFuture = CompletableFuture.supplyAsync(() -> {
+            //1. 根据skuId查询sku V
+            ResponseVo<SkuEntity> skuEntityResponseVo = this.pmsClient.querySkuById(skuId);
+            SkuEntity skuEntity = skuEntityResponseVo.getData();
+            if (skuEntity == null) {
+                throw new RuntimeException("您访问的商品不存在");
+            }
+            itemVo.setSkuId(skuId);
+            itemVo.setTitle(skuEntity.getSubtitle());
+            itemVo.setSubtitle(skuEntity.getSubtitle());
+            itemVo.setPrice(skuEntity.getPrice());
+            itemVo.setWeight(skuEntity.getWeight());
+            itemVo.setDefaultImage(skuEntity.getDefaultImage());
+            return skuEntity;
+        }, executorService);
+        //2. 根据三级分类的id查询一二三级分类 V
+        CompletableFuture<Void> categoryFuture = skuFuture.thenAcceptAsync(skuEntity -> {
+
+            ResponseVo<List<CategoryEntity>> categoryResponseVo = this.pmsClient.queryLvl123CategoriesByCid3(skuEntity.getCategoryId());
+            List<CategoryEntity> categoryEntities = categoryResponseVo.getData();
+            itemVo.setCategories(categoryEntities);
+        }, executorService);
+
+        //3. 根据品牌id查询品牌 V
+        CompletableFuture<Void> brandFuture = skuFuture.thenAcceptAsync(skuEntity -> {
+            ResponseVo<BrandEntity> brandEntityResponseVo = this.pmsClient.queryBrandById(skuId);
+            BrandEntity brandEntity = brandEntityResponseVo.getData();
+            if (brandEntity != null) {
+                itemVo.setBrandId(brandEntity.getId());
+                itemVo.setBrandName(brandEntity.getName());
+            }
+        });
+
+        //4. 根据spuId查询spu V
+        CompletableFuture<Void> spuFuture = skuFuture.thenAcceptAsync(skuEntity -> {
+            ResponseVo<SpuEntity> spuEntityResponseVo = this.pmsClient.querySpuById(skuEntity.getSpuId());
+            SpuEntity spuEntity = spuEntityResponseVo.getData();
+            if (spuEntity != null) {
+                itemVo.setSpuId(spuEntity.getId());
+                itemVo.setSpuName(spuEntity.getName());
+            }
+        });
+        //5. 根据skuId查询sku的图片列表 V
+        CompletableFuture<Void> imagesFuture = CompletableFuture.runAsync(() -> {
+            ResponseVo<List<SkuImagesEntity>> listResponseVo = this.pmsClient.querySkuImagesListBySkuId(skuId);
+            List<SkuImagesEntity> skuImagesEntities = listResponseVo.getData();
+            if (skuImagesEntities != null) {
+                itemVo.setImages(skuImagesEntities);
+            }
+        }, executorService);
+
+        //6. 根据skuId查询营销信息 V
+        CompletableFuture<Void> salesFuture = CompletableFuture.runAsync(() -> {
+            ResponseVo<List<ItemSaleVo>> salesResponseVo = this.smsClient.querySalesBySkuId(skuId);
+            List<ItemSaleVo> itemSaleVos = salesResponseVo.getData();
+            itemVo.setSales(itemSaleVos);
+        }, executorService);
+
+        //7. 根据skuId查询库存 V
+        CompletableFuture<Void> wareSkuFuture = CompletableFuture.runAsync(() -> {
+            ResponseVo<List<WareSkuEntity>> wareResponseVo = this.wmsClient.queryWareSkusBySkuId(skuId);
+            List<WareSkuEntity> wareSkuEntities = wareResponseVo.getData();
+            if (!CollectionUtils.isEmpty(wareSkuEntities)) {
+                itemVo.setStore(wareSkuEntities.stream().anyMatch(wareSkuEntity -> wareSkuEntity.getStock() - wareSkuEntity.getStockLocked() > 0));
+            }
+        }, executorService);
+
+        //8. 根据spuId查询spu下所有sku的销售属性列表 V
+        CompletableFuture<Void> saleAttrsFuture = skuFuture.thenAcceptAsync(skuEntity -> {
+            ResponseVo<List<SaleAttrValueVo>> saleAttrsResponseVo = this.pmsClient.querySaleAttrValuesBySpuId(skuEntity.getSpuId());
+            List<SaleAttrValueVo> saleAttrValueVos = saleAttrsResponseVo.getData();
+            itemVo.setSaleAttrs(saleAttrValueVos);
+        }, executorService);
+        //9. 根据skuId查询当前sku的销售属性 V
+        CompletableFuture<Void> saleAttrFuture = CompletableFuture.runAsync(() -> {
+            ResponseVo<List<SkuAttrValueEntity>> saleAttrResponseVo = this.pmsClient.querySaleAttrValuesBySkuId(skuId);
+            List<SkuAttrValueEntity> skuAttrValueEntities = saleAttrResponseVo.getData();
+            if (!CollectionUtils.isEmpty(skuAttrValueEntities)) {
+                itemVo.setSaleAttr(skuAttrValueEntities.stream().collect(Collectors.toMap(SkuAttrValueEntity::getAttrId, SkuAttrValueEntity::getAttrValue)));
+            }
+        });
+
+        //10. 根据spuId查询spu下所有销售属性组合与skuId的映射关系 V
+        CompletableFuture<Void> mappingFuture = skuFuture.thenAcceptAsync(skuEntity -> {
+            ResponseVo<String> stringResponseVo = this.pmsClient.queryMappingBySpuId(skuEntity.getSpuId());
+            String json = stringResponseVo.getData();
+            itemVo.setSkuJsons(json);
+        }, executorService);
+
+        //11. 根据spuId查询spu的描述信息 V
+        CompletableFuture<Void> descFuture = skuFuture.thenAcceptAsync(skuEntity -> {
+            ResponseVo<SpuDescEntity> spuDescEntityResponseVo = this.pmsClient.querySpuDescById(skuEntity.getSpuId());
+            SpuDescEntity spuDescEntity = spuDescEntityResponseVo.getData();
+            if (spuDescEntity != null) {
+                itemVo.setSpuImages(Arrays.asList(StringUtils.split(spuDescEntity.getDecript(), ",")));
+            }
+        }, executorService);
+
+        //12. 查询规格参数分组及组下的规格参数和值 V
+        CompletableFuture<Void> groupFuture = skuFuture.thenAcceptAsync(skuEntity -> {
+            ResponseVo<List<ItemGroupVo>> groupResponseVo = this.pmsClient.queryGroupsWithAttrValuesByCidAndSpuIdAndSkuId(skuEntity.getCategoryId(), skuEntity.getSpuId(), skuId);
+            itemVo.setGroups(groupResponseVo.getData());
+        }, executorService);
+
+        CompletableFuture.allOf(groupFuture, descFuture, mappingFuture, saleAttrFuture, saleAttrsFuture, wareSkuFuture, salesFuture, imagesFuture, spuFuture, brandFuture, categoryFuture).join();
+
+        //异步化改造页面静态化
+        executorService.execute(() -> {
+            this.generateHtml(itemVo);
+        });
+
         return itemVo;
     }
 
+    private void generateHtml(ItemVo itemVo)  {
+        try(PrintWriter printWriter  = new PrintWriter("C:\\TransData\\html\\" + itemVo.getSkuId() + ".html");) {
+            // 初始化一个上下对象
+            Context context = new Context();
+            // 给模板传递一个动态数据
+            context.setVariable("itemVo",itemVo);
+            this.templateEngine.process("item", context ,printWriter);
+            // 页面静态化方法: 1-模板名称 2-上下文对象 3-文件流
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
 
     public static void main(String[] args) throws ExecutionException, InterruptedException, IOException {
 //        // new MyThread().start();
@@ -158,7 +225,7 @@ public class ItemService {
             System.out.println("===============thenRunAsync=================");
             System.out.println("不获取上一个任务的返回结果集, 也没有自己的返回结果集");
         });
-        CompletableFuture.allOf(future1,future2,future3).join();
+        CompletableFuture.allOf(future1, future2, future3).join();
 
         /*.whenCompleteAsync((t, u) -> {
             System.out.println("===================================" + Thread.currentThread().getName());
