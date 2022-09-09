@@ -8,6 +8,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.List;
@@ -27,10 +28,12 @@ public class IndexController {
     IndexService indexService;
 
     @GetMapping("/**")
-    public String toIndex(Model model){
-      List<CategoryEntity> categoryEntityList = this.indexService.queryLvl1Categories();
-      model.addAttribute("categories",categoryEntityList);
-      return "index";
+    public String toIndex(Model model, @RequestHeader(value = "userId", required = false) Long userId) {
+        System.out.println("userId" + userId);
+
+        List<CategoryEntity> categoryEntityList = this.indexService.queryLvl1Categories();
+        model.addAttribute("categories", categoryEntityList);
+        return "index";
     }
 
     @GetMapping("/index/cates/{pid}")
@@ -42,35 +45,35 @@ public class IndexController {
 
     @GetMapping("index/test/lock")
     @ResponseBody
-    public ResponseVo testLock(){
+    public ResponseVo testLock() {
         this.indexService.testLock();
         return ResponseVo.ok();
     }
 
     @GetMapping("index/test/read")
     @ResponseBody
-    public ResponseVo testRead(){
+    public ResponseVo testRead() {
         this.indexService.testRead();
         return ResponseVo.ok();
     }
 
     @GetMapping("index/test/write")
     @ResponseBody
-    public ResponseVo testWrite(){
+    public ResponseVo testWrite() {
         this.indexService.testWrite();
         return ResponseVo.ok();
     }
 
     @GetMapping("index/test/latch")
     @ResponseBody
-    public ResponseVo testLatch(){
+    public ResponseVo testLatch() {
         this.indexService.testLatch();
         return ResponseVo.ok("班长锁门");
     }
 
     @GetMapping("index/test/count/down")
     @ResponseBody
-    public ResponseVo testCountDown(){
+    public ResponseVo testCountDown() {
         this.indexService.testCountDown();
         return ResponseVo.ok("出来了一位同学");
     }
