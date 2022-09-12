@@ -58,6 +58,6 @@ mybatis-plus:
       id-type: auto
 jwt:
   cookieName: GMALL-TOKEN
-  pubKeyPath: D:\project-0212\rsa\rsa.pub
+  pubKeyPath: C:\project-0212\rsa\rsa.pub
   userKey: user-key
   expire: 864000
